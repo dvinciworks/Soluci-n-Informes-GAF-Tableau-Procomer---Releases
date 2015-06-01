@@ -1,0 +1,315 @@
+\documentclass[spanish]{article}
+\usepackage[spanish]{babel} 
+\usepackage[latin1]{inputenc} 
+\usepackage{multicol}
+\usepackage[margin=0.65in]{geometry}
+\usepackage{enumerate}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{geometry}
+\usepackage{booktabs}
+
+% somewhere in your document's header:
+% load package "multirow"
+\usepackage{multirow}
+
+% This command computes and creates a vertical space
+% depending on the number of rows to compensate for.
+% It makes use of the counter verticalcompensationrows
+% and the length \verticalcompensationlength which equals
+% \aboverulesep plus \belowrulesep
+\newlength{\verticalcompensationlength}
+\setlength{\verticalcompensationlength}{\aboverulesep}
+\addtolength{\verticalcompensationlength}{\belowrulesep}
+\newcounter{verticalcompensationrows}
+\newcommand{\verticalcompensation}[1]{%
+\setcounter{verticalcompensationrows}{#1}%
+\addtocounter{verticalcompensationrows}{-1}%
+\vspace*{-\value{verticalcompensationrows}\verticalcompensationlength}%
+}
+
+% This command reimplements \multirow to compensate
+% for the vertical offset, but looses some functionality
+% of the \multirow command (not discussed here).
+\newcommand{\multirowbt}[3]{%
+\multirow{#1}{#2}{\verticalcompensation{#1}#3}%
+}
+
+\usepackage[table]{xcolor}
+\usepackage{tabularx}
+
+\newenvironment{Figure}
+  {\par\medskip\noindent\minipage{\linewidth}}
+  {\endminipage\par\medskip}
+  
+\usepackage{background}
+\usepackage{float}
+
+\SetBgContents{\rule{360pt}{70pt}\includegraphics[height=3.0in, keepaspectratio=true]{/Users/jimmyfigueroa/Desktop/CEFA/dvinciworks.pdf}} % \includegraphics would be here
+\SetBgAngle{0}
+\SetBgPosition{current page.north}
+\SetBgOpacity{1}
+\SetBgScale{1}
+\SetBgColor{white}
+\SetBgVshift{-1.0cm}
+
+
+\pagestyle{plain}
+
+\begin{document}
+Informe Técnico
+\begin{center}\Large\textbf{Manual de Instalación y Uso de las Vistas Información de GAF sobre Informes Contables del ERP Exactus}\end{center}
+\begin{center}Por: Ing. Jimmy Figueroa A. \\ Consultor, Asesor y Data Scientist, dvinciworks.com (t.c.c. Kemonique S.A.) \emph{jimmyfigueroa@me.com}\end{center}
+\begin{center}\today\end{center}
+\author{Ing.Jimmy Figueroa}
+\abstract
+El presente documento resume los pasos para la instalación de las vistas de información GAF así como los pasos para su aprovechamiento por parte de los usuarios del Depto. de GAF. Al no disponer del licenciamiento del \verb|TableauSoftware|, la solución ha sido implementada en \verb|Tableu Public| combinándola con la generación de ficheros de Excel desde la misma base de datos del EXACTUS, aplicando algunos pasos manuales necesarios para la distribución de activos fijos, ingresos por canon e ingresos por formularios; dado que los citados incisos no son manejados dentro del Exactus. La duración de dichos pasos es órdenes de magnitud mas eficiente que el escenario actual de los usuarios GAF en el que una \verb|macro de excel| tarda varias horas en ejecutar para generar los datos. Cuando PROCOMER adquiera \emph{Tableau Server y Tableau Desktop} estos pasos no serán necesarios y podrá reconectarse la solución del \verb|Tableau| directamente a la base de datos del EXACTUS.\\
+\begin{multicols}{2}
+\section{Instalación}
+Las Vistas de Información GAF requieren que desde la base de datos del EXACTUS se genere 1 fichero \verb|.csv|, para generar los \emph{Presupuestos} y para generar los \emph{importes reales} ejecutados en el periodo.
+\newline Debido a que el presupuesto es modificado constantemente, incluso después de haber generado el cierre de un periodo, es conveniente siempre regenerar el fichero completo, en vez de incrementalmente. Se cargan únicamente los registros iguales o superiores al año indicado por el usuario e iguales o inferiores al mes de cierre que sea indicado por el usuario GAF. 
+\newline El fichero se genera cuando el usuario lo requiera, se sugiere al menos 1 vez por cada cierre contable mensual.
+
+\subsection{Requisitos previos}
+Esta sección no corresponde al usuario GAF. Si corresponde tomar acción al usuario de TI de PROCOMER. Requisitos necesarios una única vez y son verificados durante la instalación. Están listados aquí únicamente como documentación de respaldo para el depto. de TI de PROCOMER:
+\begin{enumerate}[1.]
+	\item El usuario debe tener derecho de acceso autenticado directamente por Windows al servidor Windows y a la Base Datos EXACTUS;
+	\item El usuario debe poder acceder la tabla ``PROCOMER.DETALLE\_PRESUPUESTO'';
+	\item El usuario debe poder acceder la tabla ``PROCOMER.SoftlandBI\_CG\_saldCuenContable'';
+	\item El usuario debe poder acceder el comando ``bcp'' desde la consola de comandos de Windows (no desde la consola de WindowsPowerShell);
+	\item 150 MB de espacio libre en disco duro de la PC que va a ejecutar las instrucciones.
+	\item \verb|SQL Server Agent| debe estar habilitado y el servicio para la base de datos EXACTUS debe estar en estado encendido. Para ello verifique el estatus en el \verb|Microsoft SQL Server Configuration Manager|.
+	\item El fichero \verb|activosfijos.csv| debe conformar mandatoriamente la estructura que se indica en el repositorio de GitHub https://github.com/dvinciworks/soluciontableau-gaf-procomer. No debe contener comas (\verb|,|) en los campos que indiquen montos y el encabezado a de ser respetado así como el tipo de datos que se indica en el archivo del repositorio mencionado.
+	\item Descargar e instalar \verb|Tableau Public| en la PC del usuario GAF. Tableau Public se descarga desde el sitio de \verb|tableausoftware.com|
+\end{enumerate}
+
+\subsection{Código fuente}
+El código fuente de todos los artefactos de software empleados en la solución están disponibles en el repositorio de \verb|github| aquí: 
+
+\newline \verb|  https://github.com/dvinciworks|
+\newline \verb|             /soluciontableau-gaf-procomer| 
+
+\subsection{Instalación de solución}
+Esta sección no le atañe al usuario GAF, pero si al usuario del Depto. de TI. Para instalar la solución previo a su utilización, hay que seguir las siguientes instrucciones:
+\begin{enumerate}
+	\item Crear directorio \verb|c:\soluciontableau|
+	\item Copiar el fichero \verb|generar_fichero_gaf.bat| al directorio \verb|c:\soluciontableau|
+	\item Editar el fichero y sustituir la instrucción que lee \verb|-S JIMMYFIGUER7A21\SQLEXPRESS2| en cada una de las líneas que inician con el enunciado \verb|bcp| por la instrucción \verb|-S <SERVIDORWINDOWS>\<SERVIDOR-SQL>| tomando dichos valores del entorno de PROCOMER. Hacer lo anterior dejando el resto de las hileras intactas. \newline La tabla \verb|vista_presup_temp| es creada automáticamente desde el procedimiento almacenado \newline \verb|   generar_vista_presupuesto|. \newline De igual manera, la tabla \verb|activosfijos_temp| es creada automáticamente por el procedimiento almacenado: \newline \verb|   cargar_fichero_activos_fijos|. \newline Ambos procedimientos almacenados son invocados desde el programa \verb|generar_fichero_gaf.bat|.
+	\item Copiar los ficheros siguientes en el directorio \verb|c:\soluciontableau\|:
+	\newline \verb|     activosfijos.csv|
+	\newline \verb|     canon.csv|
+    \newline \verb|     formularios.csv|
+    \newline \verb|     toc.csv|
+    \newline \verb|     saldos_epf.csv|
+    \newline \verb|     *.tde|
+    \newline \verb|     *.twb| ó \verb|*.twbx|
+	\item Conectarse al entorno de comandos \newline \verb|  SQL Server Mgmt Studio|
+	\item Crear cada comando \verb|SQL| y procedimiento almacenado en el siguiente orden:
+	\newline \verb| 1.  crear_tabla_activosfijos_temp.sql|
+	\newline \verb| 2.  crear_tabla_jimmy_| \newline \verb|       saldos_acumulados_epf.sql|
+	\newline \verb| 3.  creat tabla vista_presup_temp.sql|
+	\newline \verb| 4.  generar_vista_presupuesto.sql|
+	\newline \verb| 5.  cargar_saldos_epf.sql|
+	\newline \verb| 6.  cargar_fichero_activosfijos.sql|
+	\newline \verb| 8.  jimmy_saldCuenContable.sql|
+	\newline \verb| 9.  cargar_saldos_epf.sql|
+	\newline \verb|10.  jimmy_tipos_cambio.sql| 
+	\newline \verb|11.  cargar_tipo_cambio.sql|
+    \newline \verb|12.  cargar_tipo_cambio.bat| 
+    \newline \verb|       -a <año> -m <mes> -t <tipo_cambio>| 
+	\newline \verb|13.  vista_real.sql|
+	\newline \verb|14.  vista_presupuesto.sql| 
+	\newline \verb|15.  vista_presup_and_real.sql| 
+	\newline \verb|16.  cargar_tipo_cambio.sql|  
+\end{enumerate}
+
+\section{Instrucciones para usuario}  
+
+En esta sección, el usuario GAF si debe tomar acción. Para actualizarla información del infográfico, los pasos que seguirá el usuario GAF con una periodicidad mensual, semanal o diaria son los siguientes:
+\begin{enumerate}[a)]
+	\item Actualizar el fichero \verb|activosfijos.csv|,
+	\item Actualizar el fichero \verb|canon.csv|,
+	\item Actualizar el fichero \verb|formularios.csv|,
+	\item Generar \verb|fichero_gaf.csv|,
+	\item Refrescar y Publicar infografico con el Tableau Public \verb|informes gaf - tableau| 
+	\item Acceder y compartir el Infográfico desde el navegador de internet.
+\end{enumerate}
+
+\subsection{Actualizar Activos Fijos}
+Debido a que la \verb|Cuenta Contable 205-007-000-000| correspondiente a activos fijos, es distribuída cada més según un fichero externo a la base de datos del Exactus, y mantenida manualmente por el depto. de contabilidad de PROCOMER; se ha dispuesto como parte de la solución, la tabla \verb|activosfijos_temp| la cual deberá ser cargada con los registros del fichero \verb|activosfijos.csv| cada més.
+\newline Esta carga de datos está previamente contemplada en como parte del fichero \verb|generar_fichero_gaf.bat|.
+\newline Este aspecto del manejo de activosfijos dado su manipulación manual por fuera del sistema Exactus, deberá mantenerse en el futuro aún cuando se cuente con el licenciamiento del Tableau.
+\newline Es muy importante recordar que el fichero \verb|activosfijos.csv| debe grabarse en formato \verb|MS-DOS csv|, no confundir con el formato \verb|.csv| de excel o windows. De no seguirse esta instrucción, la carga de Activos Fijos no se realizará.
+
+\newline Pasos para generar el fichero \verb|activosfijos.csv|:
+\begin{enumerate}[1.]
+	\item Abrir el programa \verb|Excel|
+\begin{Figure}
+ \centering
+ \includegraphics[width=\linewidth,left]{paso1.png}
+ \caption {Figura 1. Excel}
+\end{Figure}
+
+	\item Importar el fichero \verb|activosfijos.csv| en \verb|Excel|. Para ello elegir del menú las opciones \verb|Data->From Text|, una vez ahí indicar el fichero ubicado en \verb|c:\soluciontableau\activosfijos.csv|.
+\begin{Figure}
+ \centering
+ \includegraphics[width=\linewidth,left]{paso2.png}
+ \caption {Figura 2. Importar fichero activosfijos.csv en Excel}
+\end{Figure}
+
+ \item En el paso 1 del ''Text Import Wizard'' ó ''Asistente de Importación'', indicar la opción \verb|Delimited| y \verb|Next|:
+\begin{Figure}
+ \centering
+ \includegraphics[width=\linewidth,left]{paso3.png}
+ \caption {Figura 3. Import Wizard - Asistente de Importación}
+\end{Figure}
+
+\item En el paso 2 del ''Text Import Wizard'' ó ''Asistente de Importación'', indicar la opción \verb|Comma| y \verb|Finish|:
+\begin{Figure}
+ \centering
+ \includegraphics[width=\linewidth,left]{paso4.png}
+ \caption {Figura 4. Import Wizard - Paso 2}
+\end{Figure}
+
+\item En la ventana ''Import Data'', indicar la opción \verb|Ok|:
+\begin{Figure}
+ \centering
+ \includegraphics[width=\linewidth,left]{paso5.png}
+ \caption {Figura 5. Ventana ''Import Data''}
+\end{Figure}
+
+\item Actualizar la información relevante desde el propio \verb|Excel|. Tener cuidado de no modificar los encabezados del fichero, ni de introducir ``comas'' en las cantidades numéricas y no alterar el formato de los datos de ninguna manera.
+
+\item Guardar los cambios seleccionando la opción de menú \verb|Guardar| ó \verb|Save|, indicando como directorio \verb|c:\soluciontableau|, como nombre del fichero \verb|activosfijos| y como tipo de fichero \verb|MS-DOS CSV|. Obviar o no utilizar las otras opciones de tipo de fichero \verb|.CSV|:
+\begin{Figure}
+ \centering
+ \includegraphics[width=\linewidth,left]{paso6.png}
+ \caption {Figura 6. Ventana ``Guardar Como'' CSV (MS-DOS)}
+\end{Figure}
+
+\item El fichero \verb|activosfijos.csv| está correctamente generado si se al abrirlo con el programa \verb|notepad.exe| ó \verb|notepad++.exe| muestra una estructura tabular y separada por ``,'' (nó ``;'') tal y como se ilustra en la figura siguiente:
+
+\begin{Figure}
+ \centering
+ \includegraphics[width=\linewidth,left]{formato-tabular-activosfijos.png}
+ \caption {Figura 7. Formato correcto fichero activosfijos.csv}
+\end{Figure}
+\end{enumerate}
+
+\subsection{Canon y Formularios}
+Existen 2 ficheros adicionales \verb|canon.csv| y \verb|formularios.csv| que el usuario gaf debe llenar y para ello debe seguir los mismos pasos descritos en la sección anterior de \verb|activosfijos.csv|.
+\newline Los cuidados son los mismos y los pasos son los mismos. Únicamente cambia el nombre del fichero ya sea \verb|canon.csv| o \verb|formularios.csv|
+
+
+\subsection{Generar fichero gaf}
+
+Para generar los ficheros se ejecutan las siguientes instrucciones cada vez que se requiera refrescar los datos:
+\begin{enumerate}[a.]
+	\item Ingresar a la consola de comandos de windows \verb|command| PowerShell no funciona, tiene que ser ventana comando windows. 
+	\item Navegar al directorio de solución \newline \verb|   cd c:\soluciontableau|
+	\item Ejecutar la siguiente instrucción para generar el fichero de presupuestos y ejecución real: \newline \verb|   generar_fichero_gaf.bat| \newline \verb|      -a <año> -m <mes> -t <tipo_cambio>| \newline Por ejemplo la instrucción siguiente: \newline \verb| generar_fichero_gaf.bat -a 2014 -m 2 -t 555| \newline generará un fichero de presupuesto y ejecución real con los registros a partir del año 2014 en adelante pero con el mes inferior o igual a Febrero y con un tipo de cambio de 555. 
+	\item Otro ejemplo con la instrucción siguiente: \newline \verb|generar_fichero_gaf.bat -a 2015 -m 1 -t 521.8| \newline generará un fichero de presupuesto y ejecución real con los registros a partir del año 2015 en adelante pero con el mes inferior o igual a Enero y con un tipo de cambio de 555.8. 
+	\item La anterior instrucción tarda aproximadamente de 4 a 6 minutos en ejecutar y genera un fichero llamado \verb|fichero_gaf.csv|;
+\end{enumerate}
+
+\subsection{Refrezcar Infografico Tableau}
+Se ha aprovisionado una cuenta para PROCOMER en el portal público de Tableau \verb|http://public.tableausoftware.com|, lugar donde se publicará el infográfico cada vez que se actualize.. Para ingresar al portal el usuario es \verb|conta@procomer.com| y la clave \verb|Procomer2015| .
+
+\newline Pasos a seguir para refrescar y publicar el infográfico:
+
+\begin{enumerate}
+	\item Ubicar y abrir el fichero \verb|informes gaf - tableau| tal como se ilustra en la figura:
+\begin{Figure}
+ \centering
+ \includegraphics[width=\linewidth,left]{step1.png}
+ \caption {Figura 8. Abrir fichero ``informes gaf tableau'' con Tableau Public}
+\end{Figure}
+
+	\item Refrescar los datos de la conexión \verb|fichero_gaf| tal como se ilustra en la figura:
+\begin{Figure}
+ \centering
+ \includegraphics[width=\linewidth,left]{step3.png}
+ \caption {Figura 9. Refrescar los datos de la conexión}
+\end{Figure}
+
+	\item Guardar el libro de trabajo Tableau en el portal público, indicando el \verb|usuario: conta@procomer.com| y la \verb|clave: Procomer2015| de PROCOMER tal como se ilustra en las siguientes figuras:
+\begin{Figure}
+ \centering
+ \includegraphics[width=\linewidth,left]{step4.png}
+ \caption {Figura 10. Guardar los datos en el portal público de Tableau}
+\end{Figure}
+\begin{Figure}
+ \centering
+ \includegraphics[width=\linewidth,left]{step5.png}
+ \caption {Figura 11. Indicar Usuario y Password de la cuenta de PROCOMER}
+\end{Figure}
+\end{enumerate}
+
+\section{Acceder y Compartir}
+\subsection{Acceder al Infográfico}
+Para acceder al infográfico seguir los siguientes pasos:
+\begin{enumerate}
+	\item Ingresar al navegador indicando la dirección \verb|http://public.tableausoftware.com|, ubicar la opción \verb|SIGN-IN| en la parte superior derecha de la página e introduciendo el usuario y clave de PROCOMER:
+\begin{Figure}
+ \centering
+ \includegraphics[width=\linewidth,left]{step6.png}
+ \caption {Figura 12. Portal público de Tableau}
+\end{Figure}
+
+\item Una vez ingresado el infográfico se ilustra dentro del portal de la siguiente forma:
+\begin{Figure}
+ \centering
+ \includegraphics[width=\linewidth,left]{step7.png}
+ \caption {Figura 13. Infografico dentro del portal público de Tableau}
+\end{Figure}
+
+\item Para acceder el infográfico, al posicionar el cursor sobre la cajita que dice \verb|informes gaf - tableau| se habilitará una cajita verde que dice ``View'' tal como se ilustra en la figura, presionarla o hacer click sobre ella:
+\begin{Figure}
+ \centering
+ \includegraphics[width=\linewidth,left]{step8.png}
+ \caption {Figura 14. Acceder infográfico desde portal público}
+\end{Figure}
+
+\item Una vez ingresado deberá ver el infográfico con varias pestañas tal como se ilustra en la figura:
+\begin{Figure}
+ \centering
+ \includegraphics[width=\linewidth,left]{step9.png}
+ \caption {Figura 15. Infográfico accedido desde el navegador}
+\end{Figure}
+\end{enumerate}
+
+
+\subsection{Compartir el Infográfico}
+
+Existen varias opciones para compartir el infográfico:
+\begin{enumerate}[a.]
+	\item Compartir el enlace directo (link)
+	\item Compartir un \verb|.PDF| con todo el informe
+	\item Compartir una imagen de la pestaña actual
+	\item Compartir los datos de la pestaña actual
+\end{enumerate}
+
+Para compartir el enlace directo, navegar hacia la parte inferior de la página (scroll down) y en la parte inferior izquierda elegir la opción \verb|Share|, y copiar el contenido del campo que dice \verb|Link|, tal como se ilustra en la figura:
+\begin{Figure}
+ \centering
+ \includegraphics[width=\linewidth,left]{step11.png}
+ \caption {Figura 16. Compartir enlace directo (link)}
+\end{Figure}
+Una vez copiado en enlace directo, se puede \verb|pegar| en un correo electrónico y cualquier persona lo puede acceder, sin necesidad de permisos.
+
+\newline Para compartir un \verb|.PDF| de todo el informe, navegar hacia la parte inferior de la página (scroll down) y en la parte inferior izquierda elegir la opción \verb|Download|, seguido de \verb|PDF| tal como se ilustra en la figura:
+\begin{Figure}
+ \centering
+ \includegraphics[width=\linewidth,left]{step10.png}
+ \caption {Figura 17. Compartir informe como PDF}
+\end{Figure}
+
+Una vez ahí, elegir la opción \verb|Sheets in Workbook| y presionar el botón de \verb|Export|, tal como se ilustra en la figura. Esto generará un fichero \verb|.PDF| con todo el informe incluyendo todas las pestañas.
+\begin{Figure}
+ \centering
+ \includegraphics[width=\linewidth,left]{step12.png}
+ \caption {Figura 18. Seleccionar opciones de PDF}
+\end{Figure}
+\end{multicols}{2}
+
+\end{document}
